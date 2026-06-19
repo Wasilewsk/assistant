@@ -1,0 +1,17 @@
+pyttsx3
+SpeechRecognition
+pywhatkit
+wikipedia
+requests
+beautifulsoup4
+PyPDF2
+python-docx
+pytesseract
+Pillow
+pyperclip
+pygame
+pyttsx3
+comtypes
+pypiwin32
+pywin32
+feedparser
