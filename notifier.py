@@ -1,9 +1,11 @@
 import threading
 import time
 import os
+import sys
 import pygame
 import app.config as config
 import app.speaker as speaker
+import app.nvda_speech as nvda
 
 _prev_plugged = None
 _prev_battery_pct = None
@@ -21,38 +23,21 @@ def _play_sound(filepath):
     except Exception as e:
         print(f"[notifier] Sound error: {e}")
 
-def _speak_direct(text):
-    """Speak using a direct pyttsx3 engine (fallback if queue-based fails)."""
-    try:
-        if sys.platform == "win32":
-            import pythoncom
-            pythoncom.CoInitialize()
-        import pyttsx3
-        e = pyttsx3.init()
-        e.setProperty("rate", 190)
-        voices = e.getProperty("voices")
-        if voices:
-            for kw in ["zira", "hazel", "jenny", "aria", "emma", "kendra"]:
-                for v in voices:
-                    if kw in v.name.lower():
-                        e.setProperty("voice", v.id)
-                        break
-                else:
-                    continue
-                break
-            else:
-                if len(voices) > 1:
-                    e.setProperty("voice", voices[1].id)
-        print(f"[notifier] direct-speak: {text[:60]}")
-        e.say(text)
-        e.runAndWait()
-        e.stop()
-        print(f"[notifier] direct-speak done")
-    except Exception as ex:
-        print(f"[notifier] direct-speak error: {ex}")
-
 def _notify(title, message, sound=None):
     print(f"[notifier] {title}: {message}")
+
+    text = f"{title}: {message}"
+
+    # 1. Try NVDA (best for blind users)
+    if nvda.is_running():
+        print(f"[notifier] Speaking via NVDA...")
+        nvda.speak(text)
+    else:
+        # 2. Fallback: queue speak via main speaker
+        print(f"[notifier] NVDA not running, using speaker queue...")
+        threading.Thread(target=speaker.speak, args=(text,), daemon=True).start()
+
+    # 3. Tray balloon notification
     try:
         import wx
         if wx.GetApp():
@@ -61,11 +46,7 @@ def _notify(title, message, sound=None):
                 ti.tray.ShowBalloon(title, message, 3000, wx.adv.TBI_INFO)
     except Exception:
         pass
-    text = f"{title}: {message}"
-    print(f"[notifier] Spawning speak thread...")
-    threading.Thread(target=speaker.speak, args=(text,), daemon=True).start()
-    print(f"[notifier] Also firing direct fallback...")
-    threading.Thread(target=_speak_direct, args=(text,), daemon=True).start()
+
     if sound:
         _play_sound(sound)
 
