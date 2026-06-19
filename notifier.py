@@ -32,9 +32,8 @@ def _notify(title, message, sound=None):
     except Exception:
         pass
     text = f"{title}: {message}"
-    print(f"[notifier] Speaking: '{text}'")
-    speaker.speak_later(text)
-    print(f"[notifier] Speak queued")
+    print(f"[notifier] Spawning speak thread...")
+    threading.Thread(target=speaker.speak, args=(text,), daemon=True).start()
     if sound:
         _play_sound(sound)
 
@@ -82,16 +81,14 @@ def check():
 
     pct, plugged = _get_battery()
     if pct is not None:
-        # Plug / unplug transition
         if _prev_plugged is not None and plugged != _prev_plugged:
             if plugged and config.notify_battery_plugged:
                 triggered.append(("Charging", "Power adapter connected.", config.notification_sound))
-                _low_battery_notified = False  # reset on plug
+                _low_battery_notified = False
             elif not plugged and config.notify_battery_unplugged:
                 triggered.append(("On Battery", "Power adapter disconnected.", config.notification_sound))
         _prev_plugged = plugged
 
-        # Low battery — only notify once per low-battery episode
         low_now = (not plugged) and (pct <= config.low_battery_threshold)
         if low_now and not _low_battery_notified and config.notify_low_battery:
             triggered.append(("Low Battery", f"Battery at {pct}%", config.notification_sound))
@@ -100,21 +97,18 @@ def check():
             _low_battery_notified = False
         _prev_battery_pct = pct
 
-    # High RAM — notify on transition into high zone
     ram = _get_ram_percent()
     ram_high_now = ram > config.high_ram_threshold
     if ram_high_now and not _prev_ram_high and config.notify_high_ram:
         triggered.append(("High RAM Usage", f"RAM at {ram:.0f}%", config.notification_sound))
     _prev_ram_high = ram_high_now
 
-    # Low disk — notify on transition into low zone
     dp = _get_disk_percent()
     disk_low_now = dp > (100 - config.low_disk_threshold)
     if disk_low_now and not _prev_disk_low and config.notify_low_disk:
         triggered.append(("Low Disk Space", f"Disk at {dp:.0f}% used", config.notification_sound))
     _prev_disk_low = disk_low_now
 
-    # USB device attach
     current_usb = _get_usb_devices()
     if _prev_usb and current_usb:
         new_devices = current_usb - _prev_usb
