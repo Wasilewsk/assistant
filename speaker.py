@@ -123,6 +123,13 @@ def speak_async(text):
         stop()
     speech_queue.put((text, None))
 
+def speak_later(text):
+    """Queue speech without interrupting or stopping the engine."""
+    if not text:
+        return
+    print(f"[speaker] speak_later: {text[:60]}...")
+    speech_queue.put((text, None))
+
 def stop():
     while not speech_queue.empty():
         try:

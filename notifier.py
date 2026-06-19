@@ -33,7 +33,7 @@ def _notify(title, message, sound=None):
         pass
     text = f"{title}: {message}"
     print(f"[notifier] Speaking: '{text}'")
-    speaker.speak_async(text)
+    speaker.speak_later(text)
     print(f"[notifier] Speak queued")
     if sound:
         _play_sound(sound)
