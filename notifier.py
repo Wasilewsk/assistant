@@ -1,7 +1,6 @@
 import threading
 import time
 import os
-import sys
 import app.config as config
 import app.speaker as speaker
 
@@ -10,8 +9,12 @@ try:
 except ImportError:
     playsound = None
 
-_HISTORY = {}
-_last_usb = set()
+_prev_plugged = None
+_prev_battery_pct = None
+_low_battery_notified = False
+_prev_ram_high = False
+_prev_disk_low = False
+_prev_usb = set()
 
 def _play_sound(filepath):
     if playsound and filepath and os.path.exists(filepath):
@@ -22,7 +25,6 @@ def _notify(title, message, sound=None):
     try:
         import wx
         if wx.GetApp():
-            from wx.adv import TaskBarIcon
             ti = wx.GetApp().GetTopWindow()
             if hasattr(ti, 'tray') and ti.tray:
                 ti.tray.ShowBalloon(title, message, 3000, wx.adv.TBI_INFO)
@@ -31,6 +33,23 @@ def _notify(title, message, sound=None):
     speaker.speak_async(f"{title}: {message}")
     if sound:
         _play_sound(sound)
+
+def _get_battery():
+    import psutil
+    bat = psutil.sensors_battery()
+    if bat:
+        return bat.percent, bat.power_plugged
+    return None, None
+
+def _get_ram_percent():
+    import psutil
+    return psutil.virtual_memory().percent
+
+def _get_disk_percent(path=None):
+    import psutil
+    if path is None:
+        path = os.path.splitdrive(os.path.abspath("."))[0] + "\\"
+    return psutil.disk_usage(path).percent
 
 def _get_usb_devices():
     import subprocess
@@ -52,70 +71,53 @@ def _get_usb_devices():
     except Exception:
         return set()
 
-def _get_battery():
-    import psutil
-    bat = psutil.sensors_battery()
-    if bat:
-        return bat.percent, bat.power_plugged
-    return None, None
-
-def _get_ram_percent():
-    import psutil
-    return psutil.virtual_memory().percent
-
-def _get_disk_percent(path=None):
-    import psutil
-    if path is None:
-        path = os.path.splitdrive(os.path.abspath("."))[0] + "\\"
-    return psutil.disk_usage(path).percent
-
 def check():
-    global _last_usb
+    global _prev_plugged, _prev_battery_pct, _low_battery_notified
+    global _prev_ram_high, _prev_disk_low, _prev_usb
     triggered = []
 
-    # Battery checks
     pct, plugged = _get_battery()
     if pct is not None:
-        key = ("battery_low", pct < config.low_battery_threshold and not plugged)
-        if key not in _HISTORY or _HISTORY[key] != (pct, plugged):
-            _HISTORY[key] = (pct, plugged)
-            if key[1] and config.notify_low_battery:
-                triggered.append(("Low Battery", f"Battery at {pct}%", config.notification_sound))
-
-        key_p = ("battery_plugged", plugged)
-        if key_p not in _HISTORY:
-            _HISTORY[key_p] = plugged
-        elif _HISTORY[key_p] != plugged:
-            _HISTORY[key_p] = plugged
+        # Plug / unplug transition
+        if _prev_plugged is not None and plugged != _prev_plugged:
             if plugged and config.notify_battery_plugged:
                 triggered.append(("Charging", "Power adapter connected.", config.notification_sound))
+                _low_battery_notified = False  # reset on plug
             elif not plugged and config.notify_battery_unplugged:
                 triggered.append(("On Battery", "Power adapter disconnected.", config.notification_sound))
+        _prev_plugged = plugged
 
-    # RAM check
+        # Low battery — only notify once per low-battery episode
+        low_now = (not plugged) and (pct <= config.low_battery_threshold)
+        if low_now and not _low_battery_notified and config.notify_low_battery:
+            triggered.append(("Low Battery", f"Battery at {pct}%", config.notification_sound))
+            _low_battery_notified = True
+        elif not low_now:
+            _low_battery_notified = False
+        _prev_battery_pct = pct
+
+    # High RAM — notify on transition into high zone
     ram = _get_ram_percent()
-    key_r = ("ram_high", ram > config.high_ram_threshold)
-    if key_r not in _HISTORY or _HISTORY[key_r] != ram:
-        _HISTORY[key_r] = ram
-        if key_r[1] and config.notify_high_ram:
-            triggered.append(("High RAM Usage", f"RAM at {ram:.0f}%", config.notification_sound))
+    ram_high_now = ram > config.high_ram_threshold
+    if ram_high_now and not _prev_ram_high and config.notify_high_ram:
+        triggered.append(("High RAM Usage", f"RAM at {ram:.0f}%", config.notification_sound))
+    _prev_ram_high = ram_high_now
 
-    # Disk check
+    # Low disk — notify on transition into low zone
     dp = _get_disk_percent()
-    key_d = ("disk_low", dp > (100 - config.low_disk_threshold))
-    if key_d not in _HISTORY or _HISTORY[key_d] != dp:
-        _HISTORY[key_d] = dp
-        if key_d[1] and config.notify_low_disk:
-            triggered.append(("Low Disk Space", f"Disk at {dp:.0f}% used", config.notification_sound))
+    disk_low_now = dp > (100 - config.low_disk_threshold)
+    if disk_low_now and not _prev_disk_low and config.notify_low_disk:
+        triggered.append(("Low Disk Space", f"Disk at {dp:.0f}% used", config.notification_sound))
+    _prev_disk_low = disk_low_now
 
-    # USB check
+    # USB device attach
     current_usb = _get_usb_devices()
-    if _last_usb and current_usb:
-        new_devices = current_usb - _last_usb
+    if _prev_usb and current_usb:
+        new_devices = current_usb - _prev_usb
         for _ in new_devices:
             if config.notify_usb_attached:
                 triggered.append(("USB Device", "New USB device attached.", config.notification_sound))
-    _last_usb = current_usb
+    _prev_usb = current_usb
 
     for title, msg, sound in triggered:
         sound_path = os.path.join(config.notifications_dir, sound) if sound else None
