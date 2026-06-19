@@ -133,16 +133,21 @@ def handle_web_command(command):
         read_wikipedia(command)
         return True
 
-    if "open" in cmd:
-        if "youtube" in cmd:
-            if os.path.isfile(A11YTUBE_SCRIPT):
-                speaker.speak("Launching A11YTube")
+    if "youtube" in cmd or "you tube" in cmd:
+        if os.path.isfile(A11YTUBE_SCRIPT):
+            speaker.speak("Launching A11YTube")
+            try:
                 subprocess.Popen([sys.executable, A11YTUBE_SCRIPT], cwd=A11YTUBE_DIR)
-                return True
-            else:
-                speaker.speak("A11YTube not found, opening YouTube in browser")
+            except Exception as e:
+                speaker.speak(f"Failed to launch A11YTube: {e}")
                 open_website("youtube")
-                return True
+            return True
+        else:
+            speaker.speak("A11YTube not found, opening YouTube in browser")
+            open_website("youtube")
+            return True
+
+    if "open" in cmd:
         for site in COMMON_SITES:
             if site in cmd:
                 open_website(site)
