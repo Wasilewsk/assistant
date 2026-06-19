@@ -1,6 +1,6 @@
 import app.speaker as speaker
 import app.config as config
-from app.features import reader, web, system, info, utils
+from app.features import reader, web, system, info, utils, music
 
 _last_spoken = ""
 
@@ -39,7 +39,7 @@ def handle_command(command):
         return "show", _last_spoken
 
     if cmd in ["help", "what can you do", "commands", "list commands", "capabilities", "what are you capable of"]:
-        _say(f"{name}, here's what I can do. To read: 'read clipboard', 'read file name.txt', 'read PDF report', 'read image photo.png'. To search: 'search for Python tutorial', 'open YouTube', 'Wikipedia machine learning'. For info: 'what time is it', 'weather in London', 'define computer', 'get news'. Files: 'list files', 'where am I', 'go to Downloads'. System: 'open Chrome', 'volume up', 'lock computer', 'shutdown'. Tools: 'set timer 5 minutes', 'set alarm for 7 AM', 'start stopwatch', 'take a note', 'calculate 5 times 7'.")
+        _say(f"{name}, here's what I can do. To read: 'read clipboard', 'read file name.txt', 'read PDF report', 'read image photo.png'. To search: 'search for Python tutorial', 'open YouTube', 'Wikipedia machine learning'. For info: 'what time is it', 'weather in London', 'define computer', 'get news'. Files: 'list files', 'where am I', 'go to Downloads'. System: 'open Chrome', 'volume up', 'lock computer', 'shutdown'. Tools: 'set timer 5 minutes', 'set alarm for 7 AM', 'start stopwatch', 'take a note', 'calculate 5 times 7'. Music: 'play music', 'play song name', 'next song', 'stop music', 'volume 50'.")
         return None, _last_spoken
 
     if cmd in ["thank you", "thanks", "good", "nice"]:
@@ -119,6 +119,10 @@ def handle_command(command):
 
     if utils.handle_utils_command(command):
         _last_spoken = f"Utility done, {name}."
+        return None, _last_spoken
+
+    if music.handle_music_command(command):
+        _last_spoken = f"Music command done, {name}."
         return None, _last_spoken
 
     _say(f"Sorry, {name}, I didn't understand that. Say help to see what I can do.")
