@@ -1,4 +1,7 @@
+import os
+import sys
 import urllib.parse
+import subprocess
 import app.speaker as speaker
 
 try:
@@ -19,6 +22,9 @@ try:
     HAS_WHATSAPP = True
 except ImportError:
     HAS_WHATSAPP = False
+
+A11YTUBE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "A11YTube", "source")
+A11YTUBE_SCRIPT = os.path.join(A11YTUBE_DIR, "A11YTube.py")
 
 COMMON_SITES = {
     "youtube": "https://www.youtube.com",
@@ -128,6 +134,15 @@ def handle_web_command(command):
         return True
 
     if "open" in cmd:
+        if "youtube" in cmd:
+            if os.path.isfile(A11YTUBE_SCRIPT):
+                speaker.speak("Launching A11YTube")
+                subprocess.Popen([sys.executable, A11YTUBE_SCRIPT], cwd=A11YTUBE_DIR)
+                return True
+            else:
+                speaker.speak("A11YTube not found, opening YouTube in browser")
+                open_website("youtube")
+                return True
         for site in COMMON_SITES:
             if site in cmd:
                 open_website(site)
