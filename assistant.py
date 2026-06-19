@@ -97,6 +97,11 @@ def handle_command(command):
         _last_spoken = "Stopped."
         return None, _last_spoken
 
+    if cmd in ["youtube", "you tube", "open youtube", "launch youtube", "start youtube"]:
+        web.launch_youtube()
+        _last_spoken = f"Launching A11YTube, {name}."
+        return None, _last_spoken
+
     if system.handle_system_command(command):
         _last_spoken = _last_spoken or f"Executed system command, {name}."
         return None, _last_spoken
