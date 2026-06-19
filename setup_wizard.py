@@ -18,6 +18,14 @@ def load_config():
             config.ai_name = data.get("ai_name", config.ai_name)
             config.voice_index = data.get("voice_index", config.voice_index)
             config.speech_rate = data.get("speech_rate", config.speech_rate)
+            config.notify_low_battery = data.get("notify_low_battery", config.notify_low_battery)
+            config.notify_battery_plugged = data.get("notify_battery_plugged", config.notify_battery_plugged)
+            config.notify_battery_unplugged = data.get("notify_battery_unplugged", config.notify_battery_unplugged)
+            config.notify_usb_attached = data.get("notify_usb_attached", config.notify_usb_attached)
+            config.notify_high_ram = data.get("notify_high_ram", config.notify_high_ram)
+            config.notify_low_disk = data.get("notify_low_disk", config.notify_low_disk)
+            config.alarm_sound = data.get("alarm_sound", config.alarm_sound)
+            config.notification_sound = data.get("notification_sound", config.notification_sound)
             speaker.set_speed(config.speech_rate)
             speaker.set_voice(config.voice_index)
             return data.get("setup_complete", False)
@@ -36,6 +44,14 @@ def save_config():
             "ai_name": config.ai_name,
             "voice_index": config.voice_index,
             "speech_rate": config.speech_rate,
+            "notify_low_battery": config.notify_low_battery,
+            "notify_battery_plugged": config.notify_battery_plugged,
+            "notify_battery_unplugged": config.notify_battery_unplugged,
+            "notify_usb_attached": config.notify_usb_attached,
+            "notify_high_ram": config.notify_high_ram,
+            "notify_low_disk": config.notify_low_disk,
+            "alarm_sound": config.alarm_sound,
+            "notification_sound": config.notification_sound,
         }
         with open(SETUP_FILE, "w") as f:
             json.dump(data, f, indent=2)

@@ -1,6 +1,7 @@
 import wx
 import os
 import app.config as config
+from app.setup_wizard import save_config
 
 class SettingsDialog(wx.Dialog):
     def __init__(self, parent):
@@ -96,3 +97,4 @@ class SettingsDialog(wx.Dialog):
             config.notification_sound = self.notif_sound_choice.GetStringSelection()
         if self.alarm_sound_choice.GetSelection() >= 0:
             config.alarm_sound = self.alarm_sound_choice.GetStringSelection()
+        save_config()

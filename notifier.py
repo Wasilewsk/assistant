@@ -5,17 +5,6 @@ import pygame
 import app.config as config
 import app.speaker as speaker
 
-_pygame_inited = False
-
-def _init_pygame():
-    global _pygame_inited
-    if not _pygame_inited:
-        try:
-            pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-        except pygame.error:
-            pass
-        _pygame_inited = True
-
 _prev_plugged = None
 _prev_battery_pct = None
 _low_battery_notified = False
@@ -27,7 +16,6 @@ def _play_sound(filepath):
     if not filepath or not os.path.exists(filepath):
         return
     try:
-        _init_pygame()
         s = pygame.mixer.Sound(filepath)
         s.play()
     except Exception as e:
@@ -43,7 +31,10 @@ def _notify(title, message, sound=None):
                 ti.tray.ShowBalloon(title, message, 3000, wx.adv.TBI_INFO)
     except Exception:
         pass
-    speaker.speak_async(f"{title}: {message}")
+    text = f"{title}: {message}"
+    print(f"[notifier] Speaking: '{text}'")
+    speaker.speak_async(text)
+    print(f"[notifier] Speak queued")
     if sound:
         _play_sound(sound)
 
