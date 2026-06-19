@@ -1,13 +1,20 @@
 import threading
 import time
 import os
+import pygame
 import app.config as config
 import app.speaker as speaker
 
-try:
-    from playsound import playsound
-except ImportError:
-    playsound = None
+_pygame_inited = False
+
+def _init_pygame():
+    global _pygame_inited
+    if not _pygame_inited:
+        try:
+            pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+        except pygame.error:
+            pass
+        _pygame_inited = True
 
 _prev_plugged = None
 _prev_battery_pct = None
@@ -17,8 +24,14 @@ _prev_disk_low = False
 _prev_usb = set()
 
 def _play_sound(filepath):
-    if playsound and filepath and os.path.exists(filepath):
-        threading.Thread(target=playsound, args=(filepath,), daemon=True).start()
+    if not filepath or not os.path.exists(filepath):
+        return
+    try:
+        _init_pygame()
+        s = pygame.mixer.Sound(filepath)
+        s.play()
+    except Exception as e:
+        print(f"[notifier] Sound error: {e}")
 
 def _notify(title, message, sound=None):
     print(f"[notifier] {title}: {message}")
