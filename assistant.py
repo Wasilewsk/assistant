@@ -70,9 +70,13 @@ def handle_command(command):
         _say(f"Your name is {name}.")
         return None, _last_spoken
 
-    if cmd in ["what voice", "current voice", "which voice", "voice settings", "settings"]:
+    if cmd in ["what voice", "current voice", "which voice", "voice settings"]:
         _say(f"{name}, your current settings: AI name is {config.ai_name}, reading speed is {speaker.get_speed()} words per minute, wake word is {config.wake_word.capitalize()}.")
         return None, _last_spoken
+
+    if cmd in ["settings", "open settings", "notification settings", "alarm settings"]:
+        _say(f"Opening settings, {name}.")
+        return "settings", _last_spoken
 
     if cmd in ["repeat", "say that again", "repeat that", "what did you say"]:
         _say(_last_spoken or f"I haven't said anything yet, {name}.")

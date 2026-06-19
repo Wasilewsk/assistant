@@ -9,10 +9,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import app.config as config
 import app.speaker as speaker
 import app.listener as listener
+import app.notifier as notifier
 from app.assistant import handle_command
 from app.beeps import ready as beep_ready, wake as beep_wake, stop_listen as beep_stop_listen, processing_start, processing_stop
 from app.setup_wizard import is_first_run
 from app.setup_gui import SetupWizard
+from app.settings_dialog import SettingsDialog
 
 class CortanaTaskBarIcon(wx.adv.TaskBarIcon):
     def __init__(self, frame):
@@ -45,9 +47,12 @@ class CortanaTaskBarIcon(wx.adv.TaskBarIcon):
         show = menu.Append(wx.ID_ANY, "Show")
         hide = menu.Append(wx.ID_ANY, "Hide")
         menu.AppendSeparator()
+        settings_item = menu.Append(wx.ID_ANY, "Setti&ngs")
+        menu.AppendSeparator()
         quit_item = menu.Append(wx.ID_EXIT, "Quit")
         self.Bind(wx.EVT_MENU, lambda e: self.frame.Show(True), show)
         self.Bind(wx.EVT_MENU, lambda e: self.frame.Hide(), hide)
+        self.Bind(wx.EVT_MENU, lambda e: self.frame._open_settings(), settings_item)
         self.Bind(wx.EVT_MENU, lambda e: self.frame._quit(), quit_item)
         return menu
 
@@ -117,6 +122,13 @@ class CortanaFrame(wx.Frame):
     def _on_activate(self, event):
         if not event.GetActive():
             self.Hide()
+
+    def _open_settings(self):
+        dlg = SettingsDialog(self)
+        if dlg.ShowModal() == wx.ID_OK:
+            dlg.save()
+            speaker.speak_async("Settings saved.")
+        dlg.Destroy()
 
     def _on_sleep(self):
         self.Hide()
@@ -235,6 +247,8 @@ class CortanaFrame(wx.Frame):
                 wx.CallAfter(self.Raise)
             elif result == "sleep":
                 wx.CallAfter(self._on_sleep)
+            elif result == "settings":
+                wx.CallAfter(self._open_settings)
         finally:
             processing_stop()
 
@@ -248,4 +262,5 @@ def launch_gui():
         dlg.ShowModal()
         dlg.Destroy()
     CortanaFrame()
+    notifier.start()
     app.MainLoop()

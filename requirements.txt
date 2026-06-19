@@ -15,3 +15,5 @@ comtypes
 pypiwin32
 pywin32
 feedparser
+playsound
+psutil
